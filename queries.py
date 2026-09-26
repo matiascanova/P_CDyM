@@ -1,7 +1,9 @@
 import sqlite3
 
 def conectar():
-    return sqlite3.connect("app.db")
+    conexion = sqlite3.connect("app.db")
+    conexion.row_factory = sqlite3.Row  
+    return conexion
 
 def insertarGasto(monto,fecha,categoria_id):
     conexion = conectar()
@@ -113,8 +115,7 @@ def listarCategorias():
     cursor = conexion.cursor()
 
     query = """
-        SELECT id, nombre
-        FROM categoria
+        SELECT id, nombre FROM categoria
         ORDER BY nombre ASC
     """
 
