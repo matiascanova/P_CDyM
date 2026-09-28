@@ -1,8 +1,9 @@
 import sqlite3
 
-def conectar():
-    conexion = sqlite3.connect("app.db")
-    conexion.row_factory = sqlite3.Row  
+def conectar(): 
+    conexion = sqlite3.connect("/home/mm/Escritorio/P_CDyM/src/app.db")
+    print("conexion iniciada a db")
+    conexion.row_factory = sqlite3.Row
     return conexion
 
 def insertarGasto(monto,fecha,categoria_id):
@@ -65,6 +66,22 @@ def listarGastosIntervalo(fecha1,fecha2):
     conexion.close()
     return [dict(fila) for fila in res]
 
+def listarGastos():
+    conexion = conectar()
+    cursor = conexion.cursor()
+
+    query = """
+        SELECT id, monto, fecha, categoria_id
+        FROM gasto
+        ORDER BY fecha DESC
+    """
+
+    cursor.execute(query)
+    res= cursor.fetchall()
+    conexion.close()
+    return [dict(fila) for fila in res]
+
+
 def insertarCategoria(nombre):
     conexion = conectar()
     cursor = conexion.cursor()
@@ -116,7 +133,7 @@ def listarCategorias():
 
     query = """
         SELECT id, nombre FROM categoria
-        ORDER BY nombre ASC
+        ORDER BY nombre,id ASC
     """
 
     cursor.execute(query)
@@ -124,3 +141,22 @@ def listarCategorias():
     conexion.close()
 
     return [dict(fila) for fila in res]
+
+def obtenerNombreCategoria(id):
+    conexion = conectar()  #[cite: 2]
+    cursor = conexion.cursor()  #[cite: 2]
+
+    query = """
+        SELECT nombre
+        FROM categoria
+        WHERE id = :id
+    """
+    parametros = {"id": id}
+
+    cursor.execute(query, parametros) 
+    res = cursor.fetchone()  
+    conexion.close()  
+
+    if res:
+        return res[0] 
+    return None  
