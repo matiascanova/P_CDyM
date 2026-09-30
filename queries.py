@@ -3,7 +3,6 @@ import sqlite3
 def conectar(): 
     conexion = sqlite3.connect("/home/mm/Escritorio/P_CDyM/src/app.db")
     print("conexion iniciada a db")
-    conexion.execute("PRAGMA foreign_keys = ON;")
     conexion.row_factory = sqlite3.Row
     return conexion
 
@@ -117,6 +116,7 @@ def eliminarCategoria(id):
     cursor = conexion.cursor()
 
     # Nota: Si una categoría tiene gastos asociados se enoja sql y no permite
+    
     query = """
         DELETE FROM categoria
         WHERE id = :id

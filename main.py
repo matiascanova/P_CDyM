@@ -228,8 +228,6 @@ def main(page: ft.Page):
 
         if categoria is not None and fechaValida(fecha) and monto != "":
             insertarGasto(monto, fecha, categoria)
-
-            armarGastos()
             page.update()
             print("gasto insertado")
 
@@ -275,84 +273,257 @@ def main(page: ft.Page):
         ),
     )
 
-    # Tercera pestaña (gastos)
+    # Tercera pestaña
     fecha_inicio_val = None
     fecha_fin_val = None
-    textoCategorias = ft.Text(value="ANALISIS GASTOS", size=25)
-    containerTextoCategorias = ft.Container(
+
+    txt_total = ft.Text(
+        "$ 0.00", size=28, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_400
+    )
+    txt_cantidad = ft.Text("0 registros", size=13, color=ft.Colors.GREY_400)
+
+    tabla_gastos = ft.DataTable(
+        columns=[
+            ft.DataColumn(ft.Text("ID")),
+            ft.DataColumn(ft.Text("Monto")),
+            ft.DataColumn(ft.Text("Fecha")),
+            ft.DataColumn(ft.Text("Categoría ID")),
+        ],
+        rows=[],
+        expand=True,
+    )
+
+    txt_alerta = ft.Text("")
+
+    def cerrar_alerta(e):
+        dlg_alerta.open = False
+        page.update()
+
+    dlg_alerta = ft.AlertDialog(
+        title=ft.Text("Aviso"),
+        content=txt_alerta,
+        actions=[
+            ft.TextButton("Aceptar", on_click=cerrar_alerta)
+        ],
+    )
+    page.dialog = dlg_alerta
+
+    def mostrar_alerta(mensaje):
+        txt_alerta.value = mensaje
+        dlg_alerta.open = True
+        page.update()
+
+    txt_btn_inicio = ft.Text(
+        "Desde", color=ft.Colors.WHITE, weight=ft.FontWeight.W_500
+    )
+    txt_btn_fin = ft.Text(
+        "Hasta", color=ft.Colors.WHITE, weight=ft.FontWeight.W_500
+    )
+
+    def on_change_inicio(e):
+        nonlocal fecha_inicio_val
+        if date_picker_inicio.value:
+            fecha_inicio_val = date_picker_inicio.value.strftime("%d-%m-%Y")
+            txt_btn_inicio.value = date_picker_inicio.value.strftime("%d-%m-%Y")
+            btn_inicio.update()
+
+    def on_change_fin(e):
+        nonlocal fecha_fin_val
+        if date_picker_fin.value:
+            fecha_fin_val = date_picker_fin.value.strftime("%d-%m-%Y")
+            txt_btn_fin.value = date_picker_fin.value.strftime("%d-%m-%Y")
+            btn_fin.update()
+
+    date_picker_inicio = ft.DatePicker(on_change=on_change_inicio)
+    date_picker_fin = ft.DatePicker(on_change=on_change_fin)
+
+    page.overlay.extend([date_picker_inicio, date_picker_fin])
+
+    # Apertura de selectores asignando .open = True
+    def abrir_picker_inicio(e):
+        date_picker_inicio.open = True
+        page.update()
+
+    def abrir_picker_fin(e):
+        date_picker_fin.open = True
+        page.update()
+
+    # Botones 
+    btn_inicio = ft.Container(
         content=ft.Row(
-            controls=[textoCategorias],
-            alignment=ft.MainAxisAlignment.SPACE_EVENLY
+            [
+                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.WHITE),
+                txt_btn_inicio,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=8,
+        ),
+        bgcolor=ft.Colors.GREY_800,
+        padding=12,
+        border_radius=8,
+        ink=True,
+        on_click=abrir_picker_inicio,
+    )
+
+    btn_fin = ft.Container(
+        content=ft.Row(
+            [
+                ft.Icon(ft.Icons.CALENDAR_MONTH, size=18, color=ft.Colors.WHITE),
+                txt_btn_fin,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=8,
+        ),
+        bgcolor=ft.Colors.GREY_800,
+        padding=12,
+        border_radius=8,
+        ink=True,
+        on_click=abrir_picker_fin,
+    )
+
+    def filtrar_gastos(e):
+        if not fecha_inicio_val or not fecha_fin_val:
+            mostrar_alerta("Por favor, selecciona ambas fechas.")
+            return
+
+        if fecha_inicio_val > fecha_fin_val:
+            mostrar_alerta("La fecha de inicio no puede ser posterior a la fecha fin.")
+            return
+
+        gastos = listarGastosIntervalo(fecha_inicio_val, fecha_fin_val)
+
+        tabla_gastos.rows.clear()
+        total_acumulado = 0
+
+        for g in gastos:
+            total_acumulado += g["monto"]
+            tabla_gastos.rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(str(g["id"]))),
+                        ft.DataCell(ft.Text(f"${g['monto']:,.2f}")),
+                        ft.DataCell(ft.Text(str(g["fecha"]))),
+                        ft.DataCell(ft.Text(str(g["categoria_id"]))),
+                    ]
+                )
+            )
+
+        txt_total.value = f"$ {total_acumulado:,.2f}"
+        txt_cantidad.value = f"{len(gastos)} gasto(s) encontrado(s)"
+        page.update()
+
+    btn_consultar = ft.Container(
+        content=ft.Row(
+            [
+                ft.Icon(ft.Icons.SEARCH, size=18, color=ft.Colors.WHITE),
+                ft.Text("Consultar", color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=8,
+        ),
+        bgcolor=ft.Colors.BLUE_600,
+        padding=12,
+        border_radius=8,
+        ink=True,
+        on_click=filtrar_gastos,
+    )
+
+    card_filtros = ft.Card(
+        content=ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text("Seleccionar Intervalo", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Row(
+                        [
+                            btn_inicio,
+                            ft.Icon(ft.Icons.ARROW_FORWARD, color=ft.Colors.GREY_500),
+                            btn_fin,
+                            btn_consultar,
+                        ],
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    ),
+                ]
+            ),
+            padding=15,
         )
     )
 
-    inputFecha1=ft.TextField(
-        align=ft.Alignment.CENTER,
-        hint_text="intervalo",
-        width=500,
-        text_align=ft.TextAlign.CENTER,
-    )
-
-    listaVista_gastos = ft.ListView(
-        expand=True,
-        spacing=10,
-        padding=15
-    )
-
-    def armarGastos():
-
-        if fecha_inicio_val == None or fecha_fin_val == None:
-            listaVista_gastos.controls.clear()
-            gastos = listarGastos()
-
-            for g in gastos:
-                nombre_cat = obtenerNombreCategoria(g["categoria_id"]) or "Sin Categoría"
-                textoFecha = ft.Text(g["fecha"], size=16)
-                textoCat = ft.Text(nombre_cat, size=16, expand=True)
-                textoMonto = ft.Text(f"${g['monto']}", size=16, color=ft.Colors.GREEN_700)
-
-                # Función de borrado corregida
-                def borrarGasto(e, gasto_id=g["id"]):
-                    eliminarGasto(gasto_id)
-                    armarGastos()  # 1. Elimina de SQLite
-
-                btnBorrar = ft.IconButton(
-                    icon=ft.Icons.DELETE_OUTLINED,
-                    icon_color=ft.Colors.RED_400,
-                    tooltip="Eliminar gasto",
-                    on_click=borrarGasto,
-                )
-
-                filaGasto = ft.Container(
-                    padding=ft.Padding.symmetric(horizontal=15, vertical=10),
-                    border_radius=8,
-                    content=ft.Row(
-                        controls=[textoFecha, textoCat, textoMonto, btnBorrar],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+    card_kpi = ft.Card(
+        content=ft.Container(
+            content=ft.Row(
+                [
+                    ft.Column(
+                        [
+                            ft.Text("Total del Período", size=12, color=ft.Colors.GREY_400),
+                            txt_total,
+                            txt_cantidad,
+                        ],
+                        expand=True,
                     ),
-                )
-                listaVista_gastos.controls.append(filaGasto)
-                
-        else:
-            print ("hola")
-
-        page.update()
-
-    contenedorPrincipalGastos = ft.Container(
-        expand=True,
-        padding=20,
-        content=ft.Column(
-            controls=[
-                containerTextoCategorias,
-                ft.Divider(),
-                listaVista_gastos
-            ],
-        ),
+                    ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, size=42, color=ft.Colors.BLUE_400),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            ),
+            padding=20,
+        )
     )
-    armarGastos()
 
-    page.add(contenedorPrincipalGastos)
+    card_tabla = ft.Card(
+        content=ft.Container(
+            content=ft.Column(
+                [
+                    ft.Text("Detalle de Gastos", size=16, weight=ft.FontWeight.BOLD),
+                    ft.Divider(),
+                    ft.ListView(
+                        controls=[tabla_gastos],
+                        height=280,
+                    ),
+                ]
+            ),
+            padding=15,
+        )
+    )
+
+    contenedorPrincipalGastos=ft.Column(
+        controls=[card_filtros, card_kpi, card_tabla],
+        scroll=ft.ScrollMode.AUTO,
+        expand=True,
+    )
+
+    cargarCategoriaGasto()
+    armarCategorias()
+
+    # Pestañas
+    page.add(
+        ft.SafeArea(
+            expand=True,
+            content=ft.Tabs(
+                selected_index=2,
+                length=3,
+                expand=True,
+                content=ft.Column(
+                    expand=True,
+                    controls=[
+                        ft.TabBar(
+                            tabs=[
+                                ft.Tab(label="cargar gastos", icon=ft.Icons.ATTACH_MONEY),
+                                ft.Tab(label="agregar/modif. categorias", icon=ft.Icons.CATEGORY),
+                                ft.Tab(label="ver/modif. gastos", icon=ft.Icons.TABLE_VIEW),
+                            ]
+                        ),
+                        ft.TabBarView(
+                            expand=True,
+                            controls=[
+                                contenedor_principal,
+                                contenedor_principalCategorias,
+                                contenedorPrincipalGastos,
+                            ],
+                        ),
+                    ],
+                ),
+            ),
+        )
+    )
 
 
 ft.run(main)
