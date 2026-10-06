@@ -1,7 +1,11 @@
+import os
 import sqlite3
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "app.db")
+
 
 def conectar(): 
-    conexion = sqlite3.connect("/home/mm/Escritorio/P_CDyM/src/app.db")
+    conexion = sqlite3.connect(DB_PATH)
     print("conexion iniciada a db")
     conexion.row_factory = sqlite3.Row
     return conexion
